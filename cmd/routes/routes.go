@@ -34,12 +34,10 @@ func SetUpRoutes(db *sql.DB, cfg *config.Config) http.Handler {
 
 	conversationService := conversation.NewService(conversationRepo, userRepo, checkInRepo, reflectionRepo, geminiService)
 
-	// Initialize platform registry and register platforms
-	platformRegistry := platforms.NewPlatformRegistry()
-	telexPlatform := platforms.NewTelexPlatform()
-	platformRegistry.Register(telexPlatform)
+	// Initialize platform (currently Telex)
+	platform := platforms.NewTelexPlatform()
 
-	conversationHandler := conversation.NewHandler(conversationService, platformRegistry)
+	conversationHandler := conversation.NewHandler(conversationService, platform)
 
 	// Agent routes
 	router.HandleFunc("/a2a/agent/eunoia", conversationHandler.HandleA2AMessage).Methods("POST")

@@ -2,6 +2,7 @@ package platforms
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/zjoart/eunoia/internal/a2a"
@@ -15,6 +16,30 @@ func NewTelexPlatform() *TelexPlatform {
 
 func (t *TelexPlatform) Name() string {
 	return "telex"
+}
+
+func (t *TelexPlatform) ExtractMessage(parts []a2a.A2APart) string {
+	// For Telex, we need to extract only the last text message
+	// as it sends conversation history + the actual new message
+	var lastText string
+
+	for _, part := range parts {
+		if part.Kind == "text" && part.Text != "" {
+			lastText = part.Text
+		} else if part.Kind == "data" && len(part.Data) > 0 {
+			// Extract text from data parts (nested structure)
+			for _, dataPart := range part.Data {
+				if dataPart.Kind == "text" && dataPart.Text != "" {
+					// Clean HTML tags if present
+					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
+					text = strings.ReplaceAll(dataPart.Text, "</p>", "")
+					lastText = text
+				}
+			}
+		}
+	}
+
+	return strings.TrimSpace(lastText)
 }
 
 func (t *TelexPlatform) ExtractUserID(metadata map[string]interface{}) (string, error) {

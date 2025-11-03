@@ -3,7 +3,6 @@ package conversation
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/zjoart/eunoia/internal/a2a"
 	"github.com/zjoart/eunoia/internal/conversation/platforms"
@@ -11,14 +10,14 @@ import (
 )
 
 type Handler struct {
-	service          *Service
-	platformRegistry *platforms.PlatformRegistry
+	service  *Service
+	platform platforms.Platform
 }
 
-func NewHandler(service *Service, platformRegistry *platforms.PlatformRegistry) *Handler {
+func NewHandler(service *Service, platform platforms.Platform) *Handler {
 	return &Handler{
-		service:          service,
-		platformRegistry: platformRegistry,
+		service:  service,
+		platform: platform,
 	}
 }
 
@@ -46,17 +45,9 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine platform from metadata or use default (telex)
-	platformName := "telex" // default platform
-	if platform, ok := req.Params.Message.Metadata["platform"].(string); ok {
-		platformName = platform
-	}
-
-	platform, exists := h.platformRegistry.GetPlatform(platformName)
-	if !exists {
-		h.sendA2AError(w, -32601, "Method not found", "unsupported platform: "+platformName)
-		return
-	}
+	// Use the configured platform
+	platform := h.platform
+	platformName := platform.Name()
 
 	// Validate request with platform-specific logic
 	if err := platform.ValidateRequest(&req); err != nil {
@@ -75,7 +66,7 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 	channelID, _ := platform.ExtractChannelID(req.Params.Message.Metadata)
 
 	// Extract message content from parts
-	messageText := h.extractMessageText(req.Params.Message.Parts)
+	messageText := platform.ExtractMessage(req.Params.Message.Parts)
 
 	logger.Info("processing A2A message", logger.Fields{
 		"platform":   platformName,
@@ -128,28 +119,6 @@ func (h *Handler) HandleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
-}
-
-func (h *Handler) extractMessageText(parts []a2a.A2APart) string {
-	var messageText string
-
-	for _, part := range parts {
-		if part.Kind == "text" && part.Text != "" {
-			messageText += part.Text + " "
-		} else if part.Kind == "data" && len(part.Data) > 0 {
-			// Extract text from data parts (nested structure)
-			for _, dataPart := range part.Data {
-				if dataPart.Kind == "text" && dataPart.Text != "" {
-					// Clean HTML tags if present
-					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
-					text = strings.ReplaceAll(text, "</p>", "")
-					messageText += text + " "
-				}
-			}
-		}
-	}
-
-	return strings.TrimSpace(messageText)
 }
 
 func (h *Handler) sendA2AError(w http.ResponseWriter, code int, message string, data interface{}) {
