@@ -1,26 +1,34 @@
-# Eunoia - AI Mental Wellbeing Assistant
+<div align="center">
 
-A Go-based AI agent for mental wellbeing that performs emotional check-ins, analyzes reflections, and provides supportive, context-aware responses via A2A protocol integration.
+# 🌱 Eunoia - AI Mental Wellbeing Assistant
+
+**A Go-based AI agent for mental wellbeing that performs emotional check-ins, analyzes reflections, and provides supportive, context-aware responses via A2A protocol integration.**
+
+
 
 📖 **[Read the full article: Building Eunoia - A Mental Wellbeing Companion](https://dev.to/oluwadahunsi_ifeoluwa_79e/building-eunoia-a-mental-wellbeing-companion-gei)**
 
-## Features
+</div>
 
-- **Intelligent Mood Detection**: Automatically detects and tracks emotional expressions in conversations
-- **Automatic Check-ins**: Creates emotional check-ins from mood expressions (e.g., "feeling great", "I'm stressed")
-- **Smart Reflection Analysis**: Detects reflective messages and performs AI-powered sentiment analysis
-- **Context-Aware Conversations**: Maintains conversation history with personalized, empathetic responses
-- **Platform-Agnostic Architecture**: Extensible platform interface supporting multiple messaging platforms
-- **A2A Protocol Compliant**: Full JSON-RPC 2.0 compliance with agent discovery endpoint
-- **Gemini AI Integration**: Powered by Google's Gemini 2.5 Flash for natural, empathetic interactions
+---
 
-## Prerequisites
+## ✨ Features
+
+- 🎯 **Intelligent Mood Detection**: Automatically detects and tracks emotional expressions in conversations
+- 📊 **Automatic Check-ins**: Creates emotional check-ins from mood expressions (e.g., "feeling great", "I'm stressed")
+- 🔍 **Smart Reflection Analysis**: Detects reflective messages and performs AI-powered sentiment analysis
+- 💬 **Context-Aware Conversations**: Maintains conversation history with personalized, empathetic responses
+- 🔌 **Platform-Agnostic Architecture**: Extensible platform interface supporting multiple messaging platforms
+- ✅ **A2A Protocol Compliant**: Full JSON-RPC 2.0 compliance with agent discovery endpoint
+- 🤖 **Gemini AI Integration**: Powered by Google's Gemini 2.5 Flash for natural, empathetic interactions
+
+## 📋 Prerequisites
 
 - Go 1.24.2+
 - MySQL 8.0+
 - Google Gemini API key
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/zjoart/eunoia.git
@@ -39,11 +47,11 @@ make migrate-up
 make run
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 Configure your `.env` file with required values. See [.env.example](.env.example) for all required variables including database credentials and Gemini API key.
 
-## Commands
+## 📦 Commands
 
 Run `make help` to see all available commands with descriptions.
 
@@ -58,11 +66,11 @@ make test             # Run all tests
 make test-ci          # Run tests with race detection and coverage
 ```
 
-## Testing
+## 🧪 Testing
 
 Eunoia includes comprehensive test coverage across all layers:
 
-### Running Tests
+### Running Tests Locally
 
 ```bash
 # Run all tests
@@ -81,8 +89,19 @@ make test-log
 make test-function TEST=TestHandleA2AMessage_ValidRequest
 ```
 
+### 🔄 Continuous Integration
 
-## How It Works
+Tests run automatically via GitHub Actions on every push and pull request to the `main` branch. The CI pipeline:
+- ✅ Runs the full test suite with race condition detection
+- 📈 Generates coverage reports
+- 📦 Uploads coverage artifacts for review
+
+See the [GitHub Actions workflow configuration](.github/workflows/go-test.yml) for details.
+
+
+
+
+## 🔧 How It Works
 
 ### Intelligent Intent Detection
 
@@ -136,7 +155,7 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 - Agent discovery via `.well-known/agent.json`
 - Support for conversation history and context
 
-## API Endpoints
+## 🌐 API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -144,7 +163,7 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 | `/agent/health` | GET | Health check endpoint |
 | `/.well-known/agent.json` | GET | A2A agent discovery endpoint |
 
-## Architecture
+## 🏗️ Architecture
 
 - **Language:** Go 1.24.2
 - **Database:** MySQL 8.0+ with golang-migrate
@@ -155,4 +174,11 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 
 ---
 
-**Important:** This is a wellbeing support tool and should not replace professional mental health care. In crisis situations, please contact a mental health professional or emergency services.
+<div align="center">
+
+### ⚠️ Important Notice
+
+This is a wellbeing support tool and should not replace professional mental health care. 
+In crisis situations, please contact a mental health professional or emergency services.
+
+</div>
