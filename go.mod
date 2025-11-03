@@ -3,6 +3,7 @@ module github.com/zjoart/eunoia
 go 1.24.2
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/generative-ai-go v0.20.1
