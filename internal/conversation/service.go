@@ -68,7 +68,7 @@ func (s *Service) ProcessMessage(req *ChatRequest) (*ChatResponse, error) {
 		logger.Warn("failed to save user message", logger.WithError(err))
 	}
 
-	s.detectAndHandleIntents(req.PlatformUserID, req.Message, userRecord.ID)
+	s.detectAndHandleIntents(req.PlatformUserID, req.Message)
 
 	context, err := s.buildUserContext(userRecord.ID)
 	if err != nil {
@@ -207,7 +207,7 @@ func (s *Service) GetConversationHistory(platformUserID string, limit int) ([]*C
 	return reversedMessages, nil
 }
 
-func (s *Service) detectAndHandleIntents(platformUserID, message, userID string) {
+func (s *Service) detectAndHandleIntents(platformUserID, message string) {
 	messageLower := strings.ToLower(message)
 	messageLen := len(strings.Fields(message))
 

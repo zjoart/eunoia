@@ -2,6 +2,8 @@
 
 A Go-based AI agent for mental wellbeing that performs emotional check-ins, analyzes reflections, and provides supportive, context-aware responses via A2A protocol integration.
 
+📖 **[Read the full article: Building Eunoia - A Mental Wellbeing Companion](https://dev.to/oluwadahunsi_ifeoluwa_79e/building-eunoia-a-mental-wellbeing-companion-gei)**
+
 ## Features
 
 - **Intelligent Mood Detection**: Automatically detects and tracks emotional expressions in conversations
@@ -52,7 +54,33 @@ make run              # Start the application
 make migrate-up       # Apply database migrations
 make migrate-down     # Rollback migrations
 make migrate-version  # Check migration status
+make test             # Run all tests
+make test-ci          # Run tests with race detection and coverage
 ```
+
+## Testing
+
+Eunoia includes comprehensive test coverage across all layers:
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run tests with race condition detection and coverage report
+make test-ci
+
+# Run tests without cache
+make test-force
+
+# Run tests with verbose output
+make test-log
+
+# Run specific test function
+make test-function TEST=TestHandleA2AMessage_ValidRequest
+```
+
 
 ## How It Works
 
@@ -124,15 +152,6 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 - **Protocol:** A2A (JSON-RPC 2.0)
 - **Routing:** Gorilla Mux
 - **Logging:** Structured logging with Zap
-- **Design:** Clean architecture with service-repository pattern
-
-### Key Components
-
-- **Conversation Service**: Handles message processing and intent detection
-- **Check-in Service**: Manages mood tracking and emotional check-ins
-- **Reflection Service**: Processes reflections with AI analysis
-- **Platform Interface**: Abstraction layer for multi-platform support
-- **Gemini Service**: AI integration for empathetic responses
 
 ---
 
