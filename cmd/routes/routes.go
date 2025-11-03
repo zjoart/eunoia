@@ -1,0 +1,73 @@
+package routes
+
+import (
+	"database/sql"
+
+	"github.com/swaggo/swag/example/basic/docs"
+	"github.com/zjoart/eunoia/internal/config"
+
+	"net/http"
+
+	"github.com/zjoart/eunoia/internal/middleware"
+
+	// "github.com/zjoart/eunoia/internal/docs"
+
+	"github.com/gorilla/mux"
+)
+
+//	@title			Countries Xchange API
+//	@version		1.0
+//	@description	This is the backend API for the Countries Xchange an HNG Stage 2 Task.
+//	@termsOfService	https://example.com/terms/
+
+//	@contact.name	API Support
+//	@contact.url	https://example.com/support
+//	@contact.email	support@eunoia.com
+
+//	@license.name	MIT License
+//	@license.url	https://opensource.org/licenses/MIT
+
+//	@host		localhost:8080
+//	@BasePath	/
+
+// @schemes	http https
+func SetUpRoutes(db *sql.DB, cfg *config.Config) http.Handler {
+
+	allowedOrigins := []string{
+		"*",
+	}
+
+	// Create a new Gorilla Mux router
+	router := mux.NewRouter()
+
+	//Use cors middleware
+	router.Use(middleware.CorsMiddleware(allowedOrigins))
+
+	// Dynamically set Swagger host and schemes from config
+	if cfg.Swagger.Host != "" {
+		docs.SwaggerInfo.Host = cfg.Swagger.Host
+	}
+	if len(cfg.Swagger.Schemes) > 0 {
+		docs.SwaggerInfo.Schemes = cfg.Swagger.Schemes
+	}
+
+	//isProduction := cfg.AppEnv == "production"
+
+	// if !isProduction {
+	// 	// Serve Swagger UI only in non-production environments
+	// 	router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
+	// 	// Optional: Redirect /swagger to /swagger/index.html
+	// 	router.HandleFunc("/swagger", func(w http.ResponseWriter, r *http.Request) {
+	// 		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+	// 	})
+	// }
+
+	//Handle health
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Service is up and running"))
+	}).Methods("GET")
+
+	return router
+}
