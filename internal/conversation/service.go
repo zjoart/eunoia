@@ -7,6 +7,7 @@ import (
 
 	"github.com/zjoart/eunoia/internal/agent"
 	"github.com/zjoart/eunoia/internal/checkin"
+	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/internal/reflection"
 	"github.com/zjoart/eunoia/internal/user"
 	"github.com/zjoart/eunoia/pkg/logger"
@@ -49,12 +50,12 @@ func (s *Service) ProcessMessage(req *ChatRequest) (*ChatResponse, error) {
 		return nil, fmt.Errorf("failed to process user: %w", err)
 	}
 
-	userMessageID := fmt.Sprintf("%d", time.Now().UnixNano())
 	userMessage := &ConversationMessage{
-		ID:             userMessageID,
+		ID:             id.Generate(),
 		UserID:         userRecord.ID,
 		MessageRole:    "user",
 		MessageContent: req.Message,
+		MessageID:      req.MessageID,
 		CreatedAt:      time.Now(),
 	}
 
@@ -84,12 +85,12 @@ func (s *Service) ProcessMessage(req *ChatRequest) (*ChatResponse, error) {
 		return nil, fmt.Errorf("failed to generate response: %w", err)
 	}
 
-	assistantMessageID := fmt.Sprintf("%d", time.Now().UnixNano()+1)
 	assistantMessage := &ConversationMessage{
-		ID:             assistantMessageID,
+		ID:             id.Generate(),
 		UserID:         userRecord.ID,
 		MessageRole:    "assistant",
 		MessageContent: response,
+		MessageID:      req.MessageID,
 		ContextData:    context,
 		CreatedAt:      time.Now(),
 	}
@@ -98,11 +99,10 @@ func (s *Service) ProcessMessage(req *ChatRequest) (*ChatResponse, error) {
 		logger.Warn("failed to save assistant message", logger.WithError(err))
 	}
 
-	logger.Info("chat message processed successfully", logger.Fields{"message_id": assistantMessageID})
+	logger.Info("chat message processed successfully", logger.Fields{"message_id": assistantMessage.ID})
 
 	return &ChatResponse{
-		Response:  response,
-		MessageID: assistantMessageID,
+		Response: response,
 	}, nil
 }
 

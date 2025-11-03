@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/internal/user"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
@@ -37,7 +38,7 @@ func (s *Service) CreateCheckIn(req *CreateCheckInRequest) (*EmotionalCheckIn, e
 	}
 
 	checkIn := &EmotionalCheckIn{
-		ID:          fmt.Sprintf("%d", time.Now().UnixNano()),
+		ID:          id.Generate(),
 		UserID:      userRecord.ID,
 		MoodScore:   req.MoodScore,
 		MoodLabel:   req.MoodLabel,

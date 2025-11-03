@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
 
@@ -13,7 +14,9 @@ type Repository struct {
 }
 
 func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
+	return &Repository{
+		db: db,
+	}
 }
 
 func (r *Repository) CreateUser(user *User) error {
@@ -96,5 +99,5 @@ func (r *Repository) UpdateUsername(userID, username string) error {
 }
 
 func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	return id.Generate()
 }

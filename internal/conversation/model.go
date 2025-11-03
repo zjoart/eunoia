@@ -7,6 +7,7 @@ type ConversationMessage struct {
 	UserID         string    `json:"user_id"`
 	MessageRole    string    `json:"message_role"`
 	MessageContent string    `json:"message_content"`
+	MessageID      string    `json:"message_id,omitempty"`
 	ContextData    string    `json:"context_data,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }
@@ -14,9 +15,9 @@ type ConversationMessage struct {
 type ChatRequest struct {
 	TelexUserID string `json:"telex_user_id"`
 	Message     string `json:"message"`
+	MessageID   string `json:"message_id"`
 }
 
 type ChatResponse struct {
-	Response  string `json:"response"`
-	MessageID string `json:"message_id"`
+	Response string `json:"response"`
 }

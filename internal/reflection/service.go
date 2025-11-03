@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/zjoart/eunoia/internal/agent"
+	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/internal/user"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
@@ -56,7 +57,7 @@ func (s *Service) CreateReflection(req *CreateReflectionRequest) (*Reflection, e
 	}
 
 	reflection := &Reflection{
-		ID:         fmt.Sprintf("%d", time.Now().UnixNano()),
+		ID:         id.Generate(),
 		UserID:     userRecord.ID,
 		Content:    req.Content,
 		Sentiment:  strings.TrimSpace(sentiment),

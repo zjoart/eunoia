@@ -28,20 +28,20 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if r.Method != http.MethodPost {
-		h.sendA2AError(w, -32600, "Invalid Request", "method not allowed")
+		h.sendA2AError(w, a2a.InvalidRequest, "Invalid Request", "method not allowed")
 		return
 	}
 
 	var req a2a.A2ARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode A2A request", logger.WithError(err))
-		h.sendA2AError(w, -32700, "Parse error", "invalid JSON")
+		h.sendA2AError(w, a2a.ParseError, "Parse error", "invalid JSON")
 		return
 	}
 
 	// Validate JSON-RPC 2.0 format
 	if req.JSONRPC != "2.0" {
-		h.sendA2AError(w, -32600, "Invalid Request", "jsonrpc version must be 2.0")
+		h.sendA2AError(w, a2a.InvalidRequest, "Invalid Request", "jsonrpc version must be 2.0")
 		return
 	}
 
@@ -51,14 +51,14 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request with platform-specific logic
 	if err := platform.ValidateRequest(&req); err != nil {
-		h.sendA2AError(w, -32601, "Method not found", err.Error())
+		h.sendA2AError(w, a2a.MethodNotFound, "Method not found", err.Error())
 		return
 	}
 
 	// Extract user ID using platform-specific logic
 	userID, err := platform.ExtractUserID(req.Params.Message.Metadata)
 	if err != nil {
-		h.sendA2AError(w, -32602, "Invalid params", err.Error())
+		h.sendA2AError(w, a2a.InvalidParams, "Invalid params", err.Error())
 		return
 	}
 
@@ -68,40 +68,43 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 	// Extract message content from parts
 	messageText := platform.ExtractMessage(req.Params.Message.Parts)
 
+	messageId := req.Params.Message.MessageID
+
 	logger.Info("processing A2A message", logger.Fields{
 		"platform":   platformName,
 		"user_id":    userID,
 		"channel_id": channelID,
-		"message_id": req.Params.Message.MessageID,
+		"message_id": messageId,
 		"message":    messageText,
 	})
 
 	if messageText == "" {
-		h.sendA2AError(w, -32602, "Invalid params", "message content is required")
+		h.sendA2AError(w, a2a.InvalidParams, "Invalid params", "message content is required")
 		return
 	}
 
 	chatReq := &ChatRequest{
 		TelexUserID: userID,
 		Message:     messageText,
+		MessageID:   messageId,
 	}
 
 	chatResp, err := h.service.ProcessMessage(chatReq)
 	if err != nil {
 		logger.Error("failed to process message", logger.WithError(err))
-		h.sendA2AError(w, -32603, "Internal error", "failed to process message")
+		h.sendA2AError(w, a2a.InternalError, "Internal error", "failed to process message")
 		return
 	}
 
 	// Build platform-specific response
 	response := platform.BuildResponse(req.ID, &a2a.ChatResponse{
 		Response:  chatResp.Response,
-		MessageID: chatResp.MessageID,
+		MessageID: messageId,
 	})
 
 	logger.Info("A2A message processed successfully", logger.Fields{
 		"platform":   platformName,
-		"message_id": chatResp.MessageID,
+		"message_id": messageId,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
