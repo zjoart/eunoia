@@ -47,10 +47,6 @@ func NewGeminiService(apiKey string) *GeminiService {
 }
 
 func (g *GeminiService) GenerateContent(systemPrompt string, userMessage string, conversationHistory []string) (string, error) {
-	logger.Info("generating content with gemini api", logger.Fields{
-		"history_length": len(conversationHistory),
-	})
-
 	ctx := context.Background()
 
 	// Build full prompt with history embedded in text
@@ -98,12 +94,10 @@ func (g *GeminiService) GenerateContent(systemPrompt string, userMessage string,
 		responseText.WriteString(fmt.Sprintf("%v", part))
 	}
 
-	logger.Info("successfully generated content from gemini")
 	return responseText.String(), nil
 }
 
 func (g *GeminiService) AnalyzeSentiment(text string) (string, error) {
-	logger.Info("analyzing sentiment with gemini")
 
 	prompt := fmt.Sprintf(`Analyze the sentiment of the following text and respond with only one word: "positive", "negative", "neutral", or "mixed".
 
@@ -117,12 +111,10 @@ Sentiment:`, text)
 	}
 
 	sentiment = strings.TrimSpace(strings.ToLower(sentiment))
-	logger.Info("sentiment analysis completed", logger.Fields{"sentiment": sentiment})
 	return sentiment, nil
 }
 
 func (g *GeminiService) ExtractKeyThemes(text string) (string, error) {
-	logger.Info("extracting key themes with gemini")
 
 	prompt := fmt.Sprintf(`Extract 3-5 key themes or topics from the following text. Return them as a comma-separated list.
 
@@ -136,7 +128,6 @@ Key themes:`, text)
 	}
 
 	themes = strings.TrimSpace(themes)
-	logger.Info("key themes extracted", logger.Fields{"themes": themes})
 	return themes, nil
 }
 

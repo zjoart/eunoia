@@ -13,9 +13,9 @@ type ConversationMessage struct {
 }
 
 type ChatRequest struct {
-	TelexUserID string `json:"telex_user_id"`
-	Message     string `json:"message"`
-	MessageID   string `json:"message_id"`
+	PlatformUserID string `json:"platform_user_id"`
+	Message        string `json:"message"`
+	MessageID      string `json:"message_id"`
 }
 
 type ChatResponse struct {

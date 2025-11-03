@@ -14,8 +14,8 @@ type Reflection struct {
 }
 
 type CreateReflectionRequest struct {
-	TelexUserID string `json:"telex_user_id"`
-	Content     string `json:"content"`
+	PlatformUserID string `json:"platform_user_id"`
+	Content        string `json:"content"`
 }
 
 type ReflectionResponse struct {

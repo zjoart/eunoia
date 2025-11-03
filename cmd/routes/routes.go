@@ -34,14 +34,13 @@ func SetUpRoutes(db *sql.DB, cfg *config.Config) http.Handler {
 
 	conversationService := conversation.NewService(conversationRepo, userRepo, checkInRepo, reflectionRepo, geminiService)
 
-	// Initialize platform (currently Telex)
-	platform := platforms.NewTelexPlatform()
+	platform := platforms.NewPlatform("telex")
 
 	conversationHandler := conversation.NewHandler(conversationService, platform)
 
-	// Agent routes
 	router.HandleFunc("/a2a/agent/eunoia", conversationHandler.HandleA2AMessage).Methods("POST")
 	router.HandleFunc("/agent/health", conversationHandler.HandleHealthCheck).Methods("GET")
+	router.PathPrefix("/.well-known/").Handler(http.StripPrefix("/.well-known/", http.FileServer(http.Dir(".well-known"))))
 
 	return router
 }

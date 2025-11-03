@@ -1,0 +1,60 @@
+{
+    "name": "Eunoia",
+    "version": "1.0.0",
+    "description": "A compassionate AI assistant for mental wellbeing that performs emotional check-ins, analyzes reflections, and provides supportive, context-aware responses.",
+    "capabilities": [
+        "message/send",
+        "conversation",
+        "emotional-support",
+        "mood-tracking",
+        "reflection-analysis"
+    ],
+    "endpoints": {
+        "message": {
+            "url": "/a2a/agent/eunoia",
+            "method": "POST",
+            "protocol": "json-rpc-2.0"
+        },
+        "health": {
+            "url": "/agent/health",
+            "method": "GET"
+        }
+    },
+    "supportedInputModes": [
+        "text"
+    ],
+    "supportedOutputModes": [
+        "text"
+    ],
+    "metadata": {
+        "category": "wellness",
+        "tags": [
+            "mental-health",
+            "wellbeing",
+            "emotional-support",
+            "mood-tracking",
+            "reflection"
+        ],
+        "author": "zjoart",
+        "license": "MIT"
+    },
+    "features": {
+        "emotional_check_ins": {
+            "description": "Automatic detection and tracking of mood expressions",
+            "enabled": true
+        },
+        "reflection_analysis": {
+            "description": "AI-powered sentiment analysis and theme extraction from reflections",
+            "enabled": true
+        },
+        "context_awareness": {
+            "description": "Maintains conversation history and user patterns for personalized support",
+            "enabled": true
+        }
+    },
+    "privacy": {
+        "data_retention": "User data is stored for providing personalized support",
+        "data_usage": "Conversation history, mood tracking, and reflections are used to provide context-aware responses",
+        "disclaimer": "This is a wellbeing support tool and should not replace professional mental health care"
+    }
+}

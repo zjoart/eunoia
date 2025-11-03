@@ -22,11 +22,6 @@ func NewHandler(service *Service, platform platforms.Platform) *Handler {
 }
 
 func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
-	logger.Info("received A2A message request", logger.Fields{
-		"method": r.Method,
-		"path":   r.URL.Path,
-	})
-
 	if r.Method != http.MethodPost {
 		h.sendA2AError(w, a2a.InvalidRequest, "Invalid Request", "method not allowed")
 		return
@@ -75,7 +70,6 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		"user_id":    userID,
 		"channel_id": channelID,
 		"message_id": messageId,
-		"message":    messageText,
 	})
 
 	if messageText == "" {
@@ -84,9 +78,9 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chatReq := &ChatRequest{
-		TelexUserID: userID,
-		Message:     messageText,
-		MessageID:   messageId,
+		PlatformUserID: userID,
+		Message:        messageText,
+		MessageID:      messageId,
 	}
 
 	chatResp, err := h.service.ProcessMessage(chatReq)

@@ -26,13 +26,11 @@ func NewService(repo *Repository, userRepo *user.Repository, geminiService *agen
 }
 
 func (s *Service) CreateReflection(req *CreateReflectionRequest) (*Reflection, error) {
-	logger.Info("processing reflection request", logger.Fields{"telex_user_id": req.TelexUserID})
-
 	if strings.TrimSpace(req.Content) == "" {
 		return nil, fmt.Errorf("reflection content cannot be empty")
 	}
 
-	userRecord, err := s.userRepo.GetOrCreateUser(req.TelexUserID)
+	userRecord, err := s.userRepo.GetOrCreateUser(req.PlatformUserID)
 	if err != nil {
 		logger.Error("failed to get or create user", logger.WithError(err))
 		return nil, fmt.Errorf("failed to process user: %w", err)
@@ -71,12 +69,11 @@ func (s *Service) CreateReflection(req *CreateReflectionRequest) (*Reflection, e
 		return nil, fmt.Errorf("failed to create reflection: %w", err)
 	}
 
-	logger.Info("reflection created successfully", logger.Fields{"reflection_id": reflection.ID})
 	return reflection, nil
 }
 
-func (s *Service) GetReflectionHistory(telexUserID string, limit int) ([]*Reflection, error) {
-	userRecord, err := s.userRepo.GetUserByTelexID(telexUserID)
+func (s *Service) GetReflectionHistory(platformUserID string, limit int) ([]*Reflection, error) {
+	userRecord, err := s.userRepo.GetUserByPlatformID(platformUserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
@@ -85,14 +82,20 @@ func (s *Service) GetReflectionHistory(telexUserID string, limit int) ([]*Reflec
 }
 
 func (s *Service) generateReflectionAnalysis(content, sentiment, themes string) (string, error) {
-	systemPrompt := `You are a compassionate mental wellbeing assistant. Provide a brief, supportive analysis of the user's reflection. 
-Keep your response under 100 words. Be empathetic, non-judgmental, and offer gentle insights or validation.`
+	systemPrompt := `You are a thoughtful companion helping someone process their inner experience.
 
-	userPrompt := fmt.Sprintf(`User's reflection: %s
-Detected sentiment: %s
-Key themes: %s
+Respond with warmth and insight:
+- Acknowledge what stands out in their reflection
+- Notice patterns or connections they might not see
+- Validate the complexity of their feelings
+- Offer a gentle perspective or question for further reflection
+- Keep it brief (under 80 words) and genuine`
 
-Provide a supportive response:`, content, sentiment, themes)
+	userPrompt := fmt.Sprintf(`They reflected: "%s"
+
+The emotional tone seems %s, touching on: %s
+
+Offer a brief, supportive response that honors their experience:`, content, sentiment, themes)
 
 	analysis, err := s.geminiService.GenerateContent(systemPrompt, userPrompt, nil)
 	if err != nil {

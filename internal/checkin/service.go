@@ -22,16 +22,11 @@ func NewService(repo *Repository, userRepo *user.Repository) *Service {
 }
 
 func (s *Service) CreateCheckIn(req *CreateCheckInRequest) (*EmotionalCheckIn, error) {
-	logger.Info("processing check-in request", logger.Fields{
-		"telex_user_id": req.TelexUserID,
-		"mood_score":    req.MoodScore,
-	})
-
 	if req.MoodScore < 1 || req.MoodScore > 10 {
 		return nil, fmt.Errorf("mood score must be between 1 and 10")
 	}
 
-	userRecord, err := s.userRepo.GetOrCreateUser(req.TelexUserID)
+	userRecord, err := s.userRepo.GetOrCreateUser(req.PlatformUserID)
 	if err != nil {
 		logger.Error("failed to get or create user", logger.WithError(err))
 		return nil, fmt.Errorf("failed to process user: %w", err)
@@ -51,12 +46,11 @@ func (s *Service) CreateCheckIn(req *CreateCheckInRequest) (*EmotionalCheckIn, e
 		return nil, fmt.Errorf("failed to create check-in: %w", err)
 	}
 
-	logger.Info("check-in created successfully", logger.Fields{"check_in_id": checkIn.ID})
 	return checkIn, nil
 }
 
-func (s *Service) GetCheckInHistory(telexUserID string, limit int) ([]*EmotionalCheckIn, error) {
-	userRecord, err := s.userRepo.GetUserByTelexID(telexUserID)
+func (s *Service) GetCheckInHistory(platformUserID string, limit int) ([]*EmotionalCheckIn, error) {
+	userRecord, err := s.userRepo.GetUserByPlatformID(platformUserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
@@ -64,8 +58,8 @@ func (s *Service) GetCheckInHistory(telexUserID string, limit int) ([]*Emotional
 	return s.repo.GetCheckInsByUserID(userRecord.ID, limit)
 }
 
-func (s *Service) GetCheckInStats(telexUserID string, days int) (*CheckInStats, error) {
-	userRecord, err := s.userRepo.GetUserByTelexID(telexUserID)
+func (s *Service) GetCheckInStats(platformUserID string, days int) (*CheckInStats, error) {
+	userRecord, err := s.userRepo.GetUserByPlatformID(platformUserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
@@ -73,8 +67,8 @@ func (s *Service) GetCheckInStats(telexUserID string, days int) (*CheckInStats, 
 	return s.repo.GetCheckInStats(userRecord.ID, days)
 }
 
-func (s *Service) GetTodayCheckIn(telexUserID string) (*EmotionalCheckIn, error) {
-	userRecord, err := s.userRepo.GetUserByTelexID(telexUserID)
+func (s *Service) GetTodayCheckIn(platformUserID string) (*EmotionalCheckIn, error) {
+	userRecord, err := s.userRepo.GetUserByPlatformID(platformUserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}

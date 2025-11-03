@@ -3,8 +3,6 @@ package conversation
 import (
 	"database/sql"
 	"time"
-
-	"github.com/zjoart/eunoia/pkg/logger"
 )
 
 type Repository struct {
@@ -16,11 +14,6 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) SaveMessage(message *ConversationMessage) error {
-	logger.Info("saving conversation message", logger.Fields{
-		"user_id":      message.UserID,
-		"message_role": message.MessageRole,
-	})
-
 	query := `INSERT INTO conversation_history (id, user_id, message_role, message_content, context_data, created_at)
 			  VALUES (?, ?, ?, ?, ?, ?)`
 
@@ -28,20 +21,13 @@ func (r *Repository) SaveMessage(message *ConversationMessage) error {
 		message.MessageContent, message.ContextData, message.CreatedAt)
 
 	if err != nil {
-		logger.Error("failed to save conversation message", logger.WithError(err))
 		return err
 	}
 
-	logger.Info("conversation message saved successfully", logger.Fields{"message_id": message.ID})
 	return nil
 }
 
 func (r *Repository) GetConversationHistory(userID string, limit int) ([]*ConversationMessage, error) {
-	logger.Info("fetching conversation history", logger.Fields{
-		"user_id": userID,
-		"limit":   limit,
-	})
-
 	query := `SELECT id, user_id, message_role, message_content, context_data, created_at
 			  FROM conversation_history
 			  WHERE user_id = ?
@@ -50,7 +36,6 @@ func (r *Repository) GetConversationHistory(userID string, limit int) ([]*Conver
 
 	rows, err := r.db.Query(query, userID, limit)
 	if err != nil {
-		logger.Error("failed to fetch conversation history", logger.WithError(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -62,7 +47,6 @@ func (r *Repository) GetConversationHistory(userID string, limit int) ([]*Conver
 		err := rows.Scan(&message.ID, &message.UserID, &message.MessageRole,
 			&message.MessageContent, &contextData, &message.CreatedAt)
 		if err != nil {
-			logger.Error("failed to scan conversation message", logger.WithError(err))
 			return nil, err
 		}
 		if contextData.Valid {
@@ -71,7 +55,6 @@ func (r *Repository) GetConversationHistory(userID string, limit int) ([]*Conver
 		messages = append(messages, message)
 	}
 
-	logger.Info("conversation history fetched successfully", logger.Fields{"count": len(messages)})
 	return messages, nil
 }
 
@@ -85,7 +68,6 @@ func (r *Repository) GetRecentMessages(userID string, minutes int) ([]*Conversat
 
 	rows, err := r.db.Query(query, userID, startTime)
 	if err != nil {
-		logger.Error("failed to fetch recent messages", logger.WithError(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -97,7 +79,6 @@ func (r *Repository) GetRecentMessages(userID string, minutes int) ([]*Conversat
 		err := rows.Scan(&message.ID, &message.UserID, &message.MessageRole,
 			&message.MessageContent, &contextData, &message.CreatedAt)
 		if err != nil {
-			logger.Error("failed to scan message", logger.WithError(err))
 			return nil, err
 		}
 		if contextData.Valid {

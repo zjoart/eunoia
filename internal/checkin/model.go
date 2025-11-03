@@ -13,10 +13,10 @@ type EmotionalCheckIn struct {
 }
 
 type CreateCheckInRequest struct {
-	TelexUserID string `json:"telex_user_id"`
-	MoodScore   int    `json:"mood_score"`
-	MoodLabel   string `json:"mood_label"`
-	Description string `json:"description"`
+	PlatformUserID string `json:"platform_user_id"`
+	MoodScore      int    `json:"mood_score"`
+	MoodLabel      string `json:"mood_label"`
+	Description    string `json:"description"`
 }
 
 type CheckInResponse struct {

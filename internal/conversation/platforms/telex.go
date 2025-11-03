@@ -8,31 +8,29 @@ import (
 	"github.com/zjoart/eunoia/internal/a2a"
 )
 
-type TelexPlatform struct{}
-
-func NewTelexPlatform() *TelexPlatform {
-	return &TelexPlatform{}
+type PlatformImpl struct {
+	name string
 }
 
-func (t *TelexPlatform) Name() string {
-	return "telex"
+func NewPlatform(name string) *PlatformImpl {
+	return &PlatformImpl{name: name}
 }
 
-func (t *TelexPlatform) ExtractMessage(parts []a2a.A2APart) string {
-	// For Telex, we need to extract only the last text message
-	// as it sends conversation history + the actual new message
+func (p *PlatformImpl) Name() string {
+	return p.name
+}
+
+func (p *PlatformImpl) ExtractMessage(parts []a2a.A2APart) string {
 	var lastText string
 
 	for _, part := range parts {
 		if part.Kind == "text" && part.Text != "" {
 			lastText = part.Text
 		} else if part.Kind == "data" && len(part.Data) > 0 {
-			// Extract text from data parts (nested structure)
 			for _, dataPart := range part.Data {
 				if dataPart.Kind == "text" && dataPart.Text != "" {
-					// Clean HTML tags if present
 					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
-					text = strings.ReplaceAll(dataPart.Text, "</p>", "")
+					text = strings.ReplaceAll(text, "</p>", "")
 					lastText = text
 				}
 			}
@@ -42,28 +40,38 @@ func (t *TelexPlatform) ExtractMessage(parts []a2a.A2APart) string {
 	return strings.TrimSpace(lastText)
 }
 
-func (t *TelexPlatform) ExtractUserID(metadata map[string]interface{}) (string, error) {
-	if userID, ok := metadata["telex_user_id"].(string); ok && userID != "" {
-		return userID, nil
+func (p *PlatformImpl) ExtractUserID(metadata map[string]interface{}) (string, error) {
+	userIDKeys := []string{"platform_user_id", "telex_user_id", "user_id"}
+
+	for _, key := range userIDKeys {
+		if userID, ok := metadata[key].(string); ok && userID != "" {
+			return userID, nil
+		}
 	}
-	return "", errors.New("telex_user_id is required")
+
+	return "", errors.New("user_id is required in metadata")
 }
 
-func (t *TelexPlatform) ExtractChannelID(metadata map[string]interface{}) (string, error) {
-	if channelID, ok := metadata["telex_channel_id"].(string); ok && channelID != "" {
-		return channelID, nil
+func (p *PlatformImpl) ExtractChannelID(metadata map[string]interface{}) (string, error) {
+	channelIDKeys := []string{"platform_channel_id", "telex_channel_id", "channel_id"}
+
+	for _, key := range channelIDKeys {
+		if channelID, ok := metadata[key].(string); ok && channelID != "" {
+			return channelID, nil
+		}
 	}
+
 	return "", nil
 }
 
-func (t *TelexPlatform) ValidateRequest(req *a2a.A2ARequest) error {
+func (p *PlatformImpl) ValidateRequest(req *a2a.A2ARequest) error {
 	if req.Method != "message/send" {
 		return errors.New("method not supported")
 	}
 	return nil
 }
 
-func (t *TelexPlatform) BuildResponse(id string, response *a2a.ChatResponse) *a2a.A2AResponse {
+func (p *PlatformImpl) BuildResponse(id string, response *a2a.ChatResponse) *a2a.A2AResponse {
 	return &a2a.A2AResponse{
 		JSONRPC: "2.0",
 		ID:      id,
