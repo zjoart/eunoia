@@ -51,12 +51,6 @@ cd eunoia
 make tidy
 ```
 
-This will download all required Go packages including:
-- `gorilla/mux` - HTTP routing
-- `golang-migrate/migrate` - Database migrations
-- `go-sql-driver/mysql` - MySQL driver
-- `uber-go/zap` - Structured logging
-- `joho/godotenv` - Environment variable loading
 
 ### 3. Configure Environment Variables
 
@@ -152,62 +146,92 @@ curl http://localhost:8080/agent/health
 }
 ```
 
-### 3. A2A Agent Endpoint
+### 2. A2A Agent Endpoint
 
 **Endpoint:** `POST /a2a/agent/eunoia`
 
-**Description:** Main endpoint for receiving messages via A2A protocol and responding with AI-generated, context-aware responses.
+**Description:** Main endpoint for receiving messages via A2A protocol and responding with AI-generated, context-aware responses. Uses JSON-RPC 2.0 format.
 
 **Headers:**
 ```
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Request Body (JSON-RPC 2.0):**
 ```json
 {
-  "message": "How are you feeling today?",
-  "userId": "user-12345",
-  "channelId": "channel-uuid",
-  "messageId": "message-uuid",
-  "timestamp": "2025-11-03T10:30:00Z"
-}
-```
-
-**Request Fields:**
-- `message` (required, string): The user's message text
-- `userId` (required, string): Unique user identifier
-- `channelId` (optional, string): Channel identifier
-- `messageId` (optional, string): Unique message identifier
-- `timestamp` (optional, string): ISO 8601 timestamp
-
-**Success Response (200 OK):**
-```json
-{
-  "response": "I'm here to support you. How would you rate your mood today on a scale of 1-10?",
-  "messageId": "1730628000123456789",
-  "metadata": {
-    "agent": "eunoia",
-    "timestamp": "2025-11-03T10:30:00Z"
+  "jsonrpc": "2.0",
+  "id": "unique-request-id",
+  "method": "message/send",
+  "params": {
+    "message": {
+      "kind": "message",
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "Hello, how are you feeling today?"
+        }
+      ],
+      "metadata": {
+        "telex_user_id": "user-uuid",
+        "telex_channel_id": "channel-uuid",
+        "org_id": "org-uuid"
+      },
+      "messageId": "message-uuid"
+    },
+    "configuration": {
+      "acceptedOutputModes": ["text/plain"],
+      "historyLength": 0,
+      "blocking": true
+    }
   }
 }
 ```
 
-**Error Response (400 Bad Request):**
+**Request Fields:**
+- `jsonrpc` (required, string): Must be "2.0"
+- `id` (required, string): Unique request identifier
+- `method` (required, string): Must be "message/send"
+- `params.message.parts` (required, array): Message content parts
+- `params.message.metadata.telex_user_id` (required, string): User identifier
+- `params.configuration` (optional, object): Processing configuration
+
+**Success Response (JSON-RPC 2.0):**
 ```json
 {
-  "error": "Bad Request",
-  "message": "message field is required",
-  "status": 400
+  "jsonrpc": "2.0",
+  "id": "unique-request-id",
+  "result": {
+    "message": {
+      "kind": "message",
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "Hello! I'm Eunoia, here to support your mental wellbeing. How are you feeling today?"
+        }
+      ],
+      "metadata": {
+        "agent": "eunoia",
+        "timestamp": "2025-11-03T14:43:11Z"
+      },
+      "messageId": "response-message-id"
+    }
+  }
 }
 ```
 
-**Error Response (500 Internal Server Error):**
+**Error Response (JSON-RPC 2.0):**
 ```json
 {
-  "error": "Internal Server Error",
-  "message": "failed to process message",
-  "status": 500
+  "jsonrpc": "2.0",
+  "id": "unique-request-id",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": "telex_user_id is required"
+  }
 }
 ```
 
@@ -216,22 +240,37 @@ Content-Type: application/json
 curl -X POST http://localhost:8080/a2a/agent/eunoia \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "I am feeling anxious today",
-    "userId": "user-123",
-    "channelId": "channel-456",
-    "messageId": "msg-789",
-    "timestamp": "2025-11-03T10:30:00Z"
+    "jsonrpc": "2.0",
+    "id": "req-123",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "kind": "message",
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Hello"}],
+        "metadata": {
+          "telex_user_id": "user-123",
+          "telex_channel_id": "channel-456"
+        },
+        "messageId": "msg-789"
+      },
+      "configuration": {
+        "acceptedOutputModes": ["text/plain"],
+        "blocking": true
+      }
+    }
   }'
 ```
 
 ### Error Codes
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Success |
-| 400 | Bad Request - Missing or invalid required fields |
-| 405 | Method Not Allowed - Must use POST |
-| 500 | Internal Server Error - Processing failure |
+| Code | Description |
+|------|-------------|
+| -32700 | Parse error - Invalid JSON |
+| -32600 | Invalid Request - Wrong JSON-RPC format |
+| -32601 | Method not found - Unsupported method |
+| -32602 | Invalid params - Missing required fields |
+| -32603 | Internal error - Server processing error |
 
 ## Database Schema
 
@@ -246,49 +285,28 @@ See `migrations/000001_create_tables.up.sql` for full schema details.
 
 ## A2A Protocol Integration
 
-The application implements the A2A (Agent-to-Agent) protocol, allowing integration with any compatible messaging platform.
+The application implements the A2A (Agent-to-Agent) protocol using JSON-RPC 2.0, allowing integration with any compatible messaging platform.
 
 ### Integration Steps
 
 1. **Deploy** your application to a publicly accessible server
-2. **Configure** your messaging platform to send POST requests to `/a2a/agent/eunoia`
+2. **Configure** your messaging platform to send JSON-RPC 2.0 requests to `/a2a/agent/eunoia`
 3. **Test** the integration with sample messages
 
 The A2A endpoint handles:
-- User identification and management
+- JSON-RPC 2.0 request parsing
+- User identification and management from `telex_user_id`
+- Message content extraction from nested parts structure
 - Context building from user history
 - AI-powered response generation
 - Conversation history storage
+- JSON-RPC 2.0 formatted responses
+
+### Message Format
+
+Messages are sent in a nested structure with parts that can contain text, data, or other content types. The system automatically extracts text content from all parts and combines them into a single message for processing.
 
 ## Development
-
-### Project Structure
-
-```
-eunoia/
-├── cmd/
-│   ├── app/main.go              # Application entry point
-│   ├── migrate/main.go          # Migration CLI
-│   └── routes/routes.go         # HTTP routes setup
-├── internal/
-│   ├── agent/                   # AI service
-│   ├── user/                    # User feature
-│   ├── checkin/                 # Check-in feature
-│   ├── reflection/              # Reflection feature
-│   ├── conversation/            # Conversation feature + handler
-│   ├── config/                  # Configuration
-│   ├── database/                # Database connection
-│   └── middleware/              # HTTP middleware
-├── migrations/                  # SQL migrations
-├── pkg/
-│   └── logger/                  # Logging utilities
-├── .env                         # Environment variables (gitignored)
-├── .env.example                 # Environment template
-├── go.mod                       # Go module definition
-├── go.sum                       # Go dependencies checksum
-├── Makefile                     # Build and run commands
-└── telex-workflow.json          # Telex integration config
-```
 
 ### Available Make Commands
 
@@ -319,8 +337,5 @@ make test-ci
 ```
 
 
-## License
-
-MIT License - See LICENSE file for details.
 
 **Note**: This is a personal wellbeing tool and should not replace professional mental health care. If you're experiencing a mental health crisis, please contact a mental health professional or crisis hotline immediately.

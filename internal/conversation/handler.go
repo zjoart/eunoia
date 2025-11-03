@@ -3,6 +3,8 @@ package conversation
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/zjoart/eunoia/pkg/logger"
 )
@@ -18,24 +20,67 @@ func NewHandler(service *Service) *Handler {
 }
 
 type A2ARequest struct {
-	Message   string                 `json:"message"`
-	UserID    string                 `json:"userId"`
-	ChannelID string                 `json:"channelId"`
+	JSONRPC string    `json:"jsonrpc"`
+	ID      string    `json:"id"`
+	Method  string    `json:"method"`
+	Params  A2AParams `json:"params"`
+}
+
+type A2AParams struct {
+	Message       A2AMessage `json:"message"`
+	Configuration A2AConfig  `json:"configuration"`
+}
+
+type A2AMessage struct {
+	Kind      string                 `json:"kind"`
+	Role      string                 `json:"role"`
+	Parts     []A2APart              `json:"parts"`
+	Metadata  map[string]interface{} `json:"metadata"`
 	MessageID string                 `json:"messageId"`
-	Timestamp string                 `json:"timestamp"`
-	Context   map[string]interface{} `json:"context,omitempty"`
+}
+
+type A2APart struct {
+	Kind string    `json:"kind"`
+	Text string    `json:"text,omitempty"`
+	Data []A2APart `json:"data,omitempty"`
+}
+
+type A2AConfig struct {
+	AcceptedOutputModes    []string            `json:"acceptedOutputModes"`
+	HistoryLength          int                 `json:"historyLength"`
+	PushNotificationConfig A2APushNotification `json:"pushNotificationConfig"`
+	Blocking               bool                `json:"blocking"`
+}
+
+type A2APushNotification struct {
+	URL            string                 `json:"url"`
+	Token          string                 `json:"token"`
+	Authentication map[string]interface{} `json:"authentication"`
 }
 
 type A2AResponse struct {
-	Response  string                 `json:"response"`
-	MessageID string                 `json:"messageId,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	JSONRPC string    `json:"jsonrpc"`
+	ID      string    `json:"id"`
+	Result  A2AResult `json:"result,omitempty"`
+	Error   *A2AError `json:"error,omitempty"`
 }
 
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-	Status  int    `json:"status"`
+type A2AResult struct {
+	Message A2AMessageResult `json:"message"`
+}
+
+type A2AMessageResult struct {
+	Kind      string                 `json:"kind"`
+	Role      string                 `json:"role"`
+	Parts     []A2APart              `json:"parts"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	MessageID string                 `json:"messageId"`
+}
+
+type A2AError struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
@@ -45,51 +90,81 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if r.Method != http.MethodPost {
-		h.sendError(w, "method not allowed", http.StatusMethodNotAllowed)
+		h.sendA2AError(w, -32600, "Invalid Request", "method not allowed")
 		return
 	}
 
 	var req A2ARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode A2A request", logger.WithError(err))
-		h.sendError(w, "invalid request body", http.StatusBadRequest)
+		h.sendA2AError(w, -32700, "Parse error", "invalid JSON")
 		return
 	}
+
+	// Validate JSON-RPC 2.0 format
+	if req.JSONRPC != "2.0" {
+		h.sendA2AError(w, -32600, "Invalid Request", "jsonrpc version must be 2.0")
+		return
+	}
+
+	if req.Method != "message/send" {
+		h.sendA2AError(w, -32601, "Method not found", "method not supported")
+		return
+	}
+
+	// Extract message content from parts
+	messageText := h.extractMessageText(req.Params.Message.Parts)
+	userID := req.Params.Message.Metadata["telex_user_id"].(string)
 
 	logger.Info("processing A2A message", logger.Fields{
-		"user_id":    req.UserID,
-		"channel_id": req.ChannelID,
-		"message_id": req.MessageID,
+		"user_id":    userID,
+		"channel_id": req.Params.Message.Metadata["telex_channel_id"],
+		"message_id": req.Params.Message.MessageID,
+		"message":    messageText,
 	})
 
-	if req.Message == "" {
-		h.sendError(w, "message field is required", http.StatusBadRequest)
+	if messageText == "" {
+		h.sendA2AError(w, -32602, "Invalid params", "message content is required")
 		return
 	}
 
-	if req.UserID == "" {
-		h.sendError(w, "userId field is required", http.StatusBadRequest)
+	if userID == "" {
+		h.sendA2AError(w, -32602, "Invalid params", "telex_user_id is required")
 		return
 	}
 
 	chatReq := &ChatRequest{
-		TelexUserID: req.UserID,
-		Message:     req.Message,
+		TelexUserID: userID,
+		Message:     messageText,
 	}
 
 	chatResp, err := h.service.ProcessMessage(chatReq)
 	if err != nil {
 		logger.Error("failed to process message", logger.WithError(err))
-		h.sendError(w, "failed to process message", http.StatusInternalServerError)
+		h.sendA2AError(w, -32603, "Internal error", "failed to process message")
 		return
 	}
 
+	// Build A2A response
 	response := A2AResponse{
-		Response:  chatResp.Response,
-		MessageID: chatResp.MessageID,
-		Metadata: map[string]interface{}{
-			"agent":     "eunoia",
-			"timestamp": req.Timestamp,
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result: A2AResult{
+			Message: A2AMessageResult{
+				Kind: "message",
+				Role: "assistant",
+				Parts: []A2APart{
+					{
+						Kind: "text",
+						Text: chatResp.Response,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"agent":     "eunoia",
+					"timestamp": time.Now().UTC().Format(time.RFC3339),
+				},
+				MessageID: chatResp.MessageID,
+			},
 		},
 	}
 
@@ -114,19 +189,45 @@ func (h *Handler) HandleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) sendError(w http.ResponseWriter, message string, status int) {
-	logger.Error("sending error response", logger.Fields{
+func (h *Handler) extractMessageText(parts []A2APart) string {
+	var messageText string
+
+	for _, part := range parts {
+		if part.Kind == "text" && part.Text != "" {
+			messageText += part.Text + " "
+		} else if part.Kind == "data" && len(part.Data) > 0 {
+			// Extract text from data parts (nested structure)
+			for _, dataPart := range part.Data {
+				if dataPart.Kind == "text" && dataPart.Text != "" {
+					// Clean HTML tags if present
+					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
+					text = strings.ReplaceAll(text, "</p>", "")
+					messageText += text + " "
+				}
+			}
+		}
+	}
+
+	return strings.TrimSpace(messageText)
+}
+
+func (h *Handler) sendA2AError(w http.ResponseWriter, code int, message string, data interface{}) {
+	logger.Error("sending A2A error response", logger.Fields{
+		"code":    code,
 		"message": message,
-		"status":  status,
+		"data":    data,
 	})
 
-	errResp := ErrorResponse{
-		Error:   http.StatusText(status),
-		Message: message,
-		Status:  status,
+	errResp := A2AResponse{
+		JSONRPC: "2.0",
+		Error: &A2AError{
+			Code:    code,
+			Message: message,
+			Data:    data,
+		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	w.WriteHeader(http.StatusOK) // JSON-RPC 2.0 always returns 200 with error in body
 	json.NewEncoder(w).Encode(errResp)
 }
