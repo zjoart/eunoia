@@ -13,15 +13,13 @@ import (
 )
 
 func main() {
-	// Load .env file
+
 	if err := godotenv.Load(); err != nil {
 		logger.Warn("No .env file found", logger.WithError(err))
 	}
 
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Initialize database
 	db, errDb := database.InitDB(&cfg.DB)
 	if errDb != nil {
 		logger.Fatal("Failed to initialize database", logger.WithError(errDb))
@@ -29,16 +27,14 @@ func main() {
 
 	defer db.Close()
 
-	// Initialize the application
-
 	router := routes.SetUpRoutes(db, cfg)
 
-	// Initialize the application
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	logger.Info("Service starting", logger.Fields{
 		"port": cfg.Port,
 	})
 
+	// RUN
 	if err := http.ListenAndServe(addr, router); err != nil {
 		logger.Fatal("Server failed", logger.WithError(err))
 	}

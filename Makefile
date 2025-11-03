@@ -18,6 +18,25 @@ run: ## Run the app
 	go run $(CMD_DIR)/main.go
 
 
+# --- Database Migrations ---
+migrate-up: ## Run all migrations
+	@echo "Running migrations..."
+	go run cmd/migrate/main.go up
+
+migrate-down: ## Rollback all migrations
+	@echo "Rolling back migrations..."
+	go run cmd/migrate/main.go down
+
+migrate-version: ## Show current migration version
+	go run cmd/migrate/main.go version
+
+migrate-force: ## Force migration version (Usage: make migrate-force VERSION=1)
+	go run cmd/migrate/main.go force $(VERSION)
+
+migrate-steps: ## Run n migration steps (Usage: make migrate-steps STEPS=1)
+	go run cmd/migrate/main.go steps $(STEPS)
+
+
 # --- Tidy go.mod ---
 tidy: ## Tidy go.mod and go.sum
 	@echo "🧹 Tidying go.mod and go.sum..."
@@ -55,4 +74,4 @@ test-log: ## Run all tests in the project, including showing logs
 	go test -v ./... 
 
 
-.PHONY: test, test-force test-function run tidy help clean test-log
+.PHONY: test test-force test-function run tidy help clean test-log migrate-up migrate-down migrate-version migrate-force migrate-steps

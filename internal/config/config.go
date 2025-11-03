@@ -3,13 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
-	"strings"
 )
-
-type SwaggerConfig struct {
-	Host    string
-	Schemes []string
-}
 
 type DBConfig struct {
 	User     string
@@ -19,11 +13,15 @@ type DBConfig struct {
 	Name     string
 }
 
+type AIConfig struct {
+	GeminiAPIKey string
+}
+
 type Config struct {
-	AppEnv  string
-	Port    string
-	DB      DBConfig
-	Swagger SwaggerConfig
+	AppEnv string
+	Port   string
+	DB     DBConfig
+	AI     AIConfig
 }
 
 func LoadConfig() *Config {
@@ -36,20 +34,14 @@ func LoadConfig() *Config {
 			Port:     getEnv("DB_PORT"),
 			Name:     getEnv("DB_NAME"),
 		},
-		Swagger: loadSwaggerConfig(),
-		AppEnv:  getEnv("APP_ENV"),
+
+		AppEnv: getEnv("APP_ENV"),
+		AI: AIConfig{
+			GeminiAPIKey: getEnv("GEMINI_API_KEY"),
+		},
 	}
 
 	return config
-}
-
-func loadSwaggerConfig() SwaggerConfig {
-	host := getEnv("API_BASE")
-	schemes := getEnv("SWAGGER_SCHEMES")
-	return SwaggerConfig{
-		Host:    host,
-		Schemes: strings.Split(schemes, ","),
-	}
 }
 
 func getEnv(key string) string {
