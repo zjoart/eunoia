@@ -4,83 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/zjoart/eunoia/internal/a2a"
+	"github.com/zjoart/eunoia/internal/conversation/platforms"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
 
 type Handler struct {
-	service *Service
+	service          *Service
+	platformRegistry *platforms.PlatformRegistry
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service *Service, platformRegistry *platforms.PlatformRegistry) *Handler {
 	return &Handler{
-		service: service,
+		service:          service,
+		platformRegistry: platformRegistry,
 	}
-}
-
-type A2ARequest struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      string    `json:"id"`
-	Method  string    `json:"method"`
-	Params  A2AParams `json:"params"`
-}
-
-type A2AParams struct {
-	Message       A2AMessage `json:"message"`
-	Configuration A2AConfig  `json:"configuration"`
-}
-
-type A2AMessage struct {
-	Kind      string                 `json:"kind"`
-	Role      string                 `json:"role"`
-	Parts     []A2APart              `json:"parts"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	MessageID string                 `json:"messageId"`
-}
-
-type A2APart struct {
-	Kind string    `json:"kind"`
-	Text string    `json:"text,omitempty"`
-	Data []A2APart `json:"data,omitempty"`
-}
-
-type A2AConfig struct {
-	AcceptedOutputModes    []string            `json:"acceptedOutputModes"`
-	HistoryLength          int                 `json:"historyLength"`
-	PushNotificationConfig A2APushNotification `json:"pushNotificationConfig"`
-	Blocking               bool                `json:"blocking"`
-}
-
-type A2APushNotification struct {
-	URL            string                 `json:"url"`
-	Token          string                 `json:"token"`
-	Authentication map[string]interface{} `json:"authentication"`
-}
-
-type A2AResponse struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      string    `json:"id"`
-	Result  A2AResult `json:"result,omitempty"`
-	Error   *A2AError `json:"error,omitempty"`
-}
-
-type A2AResult struct {
-	Message A2AMessageResult `json:"message"`
-}
-
-type A2AMessageResult struct {
-	Kind      string                 `json:"kind"`
-	Role      string                 `json:"role"`
-	Parts     []A2APart              `json:"parts"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	MessageID string                 `json:"messageId"`
-}
-
-type A2AError struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
 }
 
 func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +33,7 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req A2ARequest
+	var req a2a.A2ARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Error("failed to decode A2A request", logger.WithError(err))
 		h.sendA2AError(w, -32700, "Parse error", "invalid JSON")
@@ -107,29 +46,47 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Method != "message/send" {
-		h.sendA2AError(w, -32601, "Method not found", "method not supported")
+	// Determine platform from metadata or use default (telex)
+	platformName := "telex" // default platform
+	if platform, ok := req.Params.Message.Metadata["platform"].(string); ok {
+		platformName = platform
+	}
+
+	platform, exists := h.platformRegistry.GetPlatform(platformName)
+	if !exists {
+		h.sendA2AError(w, -32601, "Method not found", "unsupported platform: "+platformName)
 		return
 	}
 
+	// Validate request with platform-specific logic
+	if err := platform.ValidateRequest(&req); err != nil {
+		h.sendA2AError(w, -32601, "Method not found", err.Error())
+		return
+	}
+
+	// Extract user ID using platform-specific logic
+	userID, err := platform.ExtractUserID(req.Params.Message.Metadata)
+	if err != nil {
+		h.sendA2AError(w, -32602, "Invalid params", err.Error())
+		return
+	}
+
+	// Extract channel ID (optional)
+	channelID, _ := platform.ExtractChannelID(req.Params.Message.Metadata)
+
 	// Extract message content from parts
 	messageText := h.extractMessageText(req.Params.Message.Parts)
-	userID := req.Params.Message.Metadata["telex_user_id"].(string)
 
 	logger.Info("processing A2A message", logger.Fields{
+		"platform":   platformName,
 		"user_id":    userID,
-		"channel_id": req.Params.Message.Metadata["telex_channel_id"],
+		"channel_id": channelID,
 		"message_id": req.Params.Message.MessageID,
 		"message":    messageText,
 	})
 
 	if messageText == "" {
 		h.sendA2AError(w, -32602, "Invalid params", "message content is required")
-		return
-	}
-
-	if userID == "" {
-		h.sendA2AError(w, -32602, "Invalid params", "telex_user_id is required")
 		return
 	}
 
@@ -145,30 +102,14 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build A2A response
-	response := A2AResponse{
-		JSONRPC: "2.0",
-		ID:      req.ID,
-		Result: A2AResult{
-			Message: A2AMessageResult{
-				Kind: "message",
-				Role: "assistant",
-				Parts: []A2APart{
-					{
-						Kind: "text",
-						Text: chatResp.Response,
-					},
-				},
-				Metadata: map[string]interface{}{
-					"agent":     "eunoia",
-					"timestamp": time.Now().UTC().Format(time.RFC3339),
-				},
-				MessageID: chatResp.MessageID,
-			},
-		},
-	}
+	// Build platform-specific response
+	response := platform.BuildResponse(req.ID, &a2a.ChatResponse{
+		Response:  chatResp.Response,
+		MessageID: chatResp.MessageID,
+	})
 
 	logger.Info("A2A message processed successfully", logger.Fields{
+		"platform":   platformName,
 		"message_id": chatResp.MessageID,
 	})
 
@@ -189,7 +130,7 @@ func (h *Handler) HandleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) extractMessageText(parts []A2APart) string {
+func (h *Handler) extractMessageText(parts []a2a.A2APart) string {
 	var messageText string
 
 	for _, part := range parts {
@@ -218,9 +159,9 @@ func (h *Handler) sendA2AError(w http.ResponseWriter, code int, message string, 
 		"data":    data,
 	})
 
-	errResp := A2AResponse{
+	errResp := a2a.A2AResponse{
 		JSONRPC: "2.0",
-		Error: &A2AError{
+		Error: &a2a.A2AError{
 			Code:    code,
 			Message: message,
 			Data:    data,

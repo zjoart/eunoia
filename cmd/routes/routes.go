@@ -9,6 +9,7 @@ import (
 	"github.com/zjoart/eunoia/internal/checkin"
 	"github.com/zjoart/eunoia/internal/config"
 	"github.com/zjoart/eunoia/internal/conversation"
+	"github.com/zjoart/eunoia/internal/conversation/platforms"
 	"github.com/zjoart/eunoia/internal/middleware"
 	"github.com/zjoart/eunoia/internal/reflection"
 	"github.com/zjoart/eunoia/internal/user"
@@ -33,7 +34,12 @@ func SetUpRoutes(db *sql.DB, cfg *config.Config) http.Handler {
 
 	conversationService := conversation.NewService(conversationRepo, userRepo, checkInRepo, reflectionRepo, geminiService)
 
-	conversationHandler := conversation.NewHandler(conversationService)
+	// Initialize platform registry and register platforms
+	platformRegistry := platforms.NewPlatformRegistry()
+	telexPlatform := platforms.NewTelexPlatform()
+	platformRegistry.Register(telexPlatform)
+
+	conversationHandler := conversation.NewHandler(conversationService, platformRegistry)
 
 	// Agent routes
 	router.HandleFunc("/a2a/agent/eunoia", conversationHandler.HandleA2AMessage).Methods("POST")
