@@ -24,21 +24,68 @@ func (p *PlatformImpl) Name() string {
 func (p *PlatformImpl) ExtractMessage(parts []a2a.A2APart) string {
 	var lastText string
 
+	// Iterate through all parts to find the last text message
 	for _, part := range parts {
 		if part.Kind == "text" && part.Text != "" {
 			lastText = part.Text
 		} else if part.Kind == "data" && len(part.Data) > 0 {
+			// Check data parts for the last message
 			for _, dataPart := range part.Data {
 				if dataPart.Kind == "text" && dataPart.Text != "" {
 					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
 					text = strings.ReplaceAll(text, "</p>", "")
-					lastText = text
+					text = strings.TrimSpace(text)
+					if text != "" {
+						lastText = text
+					}
 				}
 			}
 		}
 	}
 
 	return strings.TrimSpace(lastText)
+} // ExtractHistory extracts conversation history from the data parts
+func (p *PlatformImpl) ExtractHistory(parts []a2a.A2APart, currentMessageID string) []a2a.A2AMessageResult {
+	var history []a2a.A2AMessageResult
+
+	for _, part := range parts {
+		if part.Kind == "data" && len(part.Data) > 0 {
+			// Each pair of texts in data represents a conversation turn
+			// Odd indices are typically user messages, even are agent responses
+			for i, dataPart := range part.Data {
+				if dataPart.Kind == "text" && dataPart.Text != "" {
+					text := strings.ReplaceAll(dataPart.Text, "<p>", "")
+					text = strings.ReplaceAll(text, "</p>", "")
+					text = strings.TrimSpace(text)
+
+					if text == "" {
+						continue
+					}
+
+					// Determine role based on pattern (this is a simple heuristic)
+					role := "user"
+					if i%2 == 1 {
+						role = "agent"
+					}
+
+					history = append(history, a2a.A2AMessageResult{
+						MessageID: currentMessageID,
+						Role:      role,
+						TaskID:    id.Generate(),
+						Parts: []a2a.A2APart{
+							{
+								Kind: "text",
+								Text: text,
+							},
+						},
+						Kind: "message",
+					})
+				}
+			}
+		}
+	}
+
+	return history
 }
 
 func (p *PlatformImpl) ExtractUserID(metadata map[string]interface{}) (string, error) {
@@ -72,33 +119,44 @@ func (p *PlatformImpl) ValidateRequest(req *a2a.A2ARequest) error {
 	return nil
 }
 
-func (p *PlatformImpl) BuildResponse(requestId string, response *a2a.ChatResponse) *a2a.A2AResponse {
+func (p *PlatformImpl) BuildResponse(requestId, messageID string, history []a2a.A2AMessageResult, response *a2a.ChatResponse) *a2a.A2AResponse {
 	taskID := id.Generate()
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+
+	// Create the new agent response message (using messageID from request)
+	newMessage := a2a.A2AMessageResult{
+		MessageID: messageID,
+		Role:      "agent",
+		Parts: []a2a.A2APart{
+			{
+				Kind: "text",
+				Text: response.Response,
+			},
+		},
+		Kind:   "message",
+		TaskID: taskID,
+		Metadata: map[string]interface{}{
+			"agent": "eunoia",
+		},
+	}
+
+	// Append the new agent response to history
+	updatedHistory := append(history, newMessage)
 
 	return &a2a.A2AResponse{
 		JSONRPC: "2.0",
 		ID:      requestId,
 		Result: a2a.A2AResult{
-			Task: a2a.A2ATaskResult{
-				ID:     taskID,
-				Status: "completed",
+			ID:        taskID,
+			ContextID: id.Generate(),
+			Status: a2a.A2ATaskStatus{
+				State:     "completed",
+				Timestamp: timestamp,
+				Message:   newMessage,
 			},
-			Message: a2a.A2AMessageResult{
-				Kind: "message",
-				Role: "assistant",
-				Parts: []a2a.A2APart{
-					{
-						Kind: "text",
-						Text: response.Response,
-					},
-				},
-				Metadata: map[string]interface{}{
-					"agent":     "eunoia",
-					"timestamp": time.Now().UTC().Format(time.RFC3339),
-				},
-				MessageID: response.MessageID,
-				TaskID:    taskID,
-			},
+			Artifacts: []a2a.A2AArtifact{},
+			History:   updatedHistory,
+			Kind:      "task",
 		},
 	}
 }

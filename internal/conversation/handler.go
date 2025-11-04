@@ -65,6 +65,9 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 
 	messageId := req.Params.Message.MessageID
 
+	// Extract conversation history from parts (passing current messageID)
+	history := platform.ExtractHistory(req.Params.Message.Parts, messageId)
+
 	logger.Info("processing A2A message", logger.Fields{
 		"platform":   platformName,
 		"user_id":    userID,
@@ -90,10 +93,9 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build platform-specific response
-	response := platform.BuildResponse(req.ID, &a2a.ChatResponse{
-		Response:  chatResp.Response,
-		MessageID: messageId,
+	// Build platform-specific response with history
+	response := platform.BuildResponse(req.ID, messageId, history, &a2a.ChatResponse{
+		Response: chatResp.Response,
 	})
 
 	logger.Info("A2A message processed successfully", logger.Fields{

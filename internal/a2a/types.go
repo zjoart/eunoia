@@ -53,26 +53,38 @@ type A2AResponse struct {
 	Error   *A2AError `json:"error,omitempty"`
 }
 
-// A2AResult contains the result of an A2A request
+// A2AResult represents the task result (the top-level result object)
 type A2AResult struct {
-	Task    A2ATaskResult    `json:"task"`
-	Message A2AMessageResult `json:"message"`
+	ID        string             `json:"id"`
+	ContextID string             `json:"contextId,omitempty"`
+	Status    A2ATaskStatus      `json:"status"`
+	Artifacts []A2AArtifact      `json:"artifacts,omitempty"`
+	History   []A2AMessageResult `json:"history,omitempty"`
+	Kind      string             `json:"kind"`
 }
 
-// A2ATaskResult represents a task in A2A responses
-type A2ATaskResult struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
+// A2ATaskStatus represents the status of a task with embedded message
+type A2ATaskStatus struct {
+	State     string           `json:"state"`
+	Timestamp string           `json:"timestamp"`
+	Message   A2AMessageResult `json:"message"`
 }
 
-// A2AMessageResult represents a message result in A2A responses
+// A2AMessageResult represents a message in A2A responses
 type A2AMessageResult struct {
-	Kind      string                 `json:"kind"`
+	MessageID string                 `json:"messageId"`
 	Role      string                 `json:"role"`
 	Parts     []A2APart              `json:"parts"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	MessageID string                 `json:"messageId"`
+	Kind      string                 `json:"kind"`
 	TaskID    string                 `json:"taskId"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// A2AArtifact represents an artifact in A2A responses
+type A2AArtifact struct {
+	ArtifactID string    `json:"artifactId"`
+	Name       string    `json:"name"`
+	Parts      []A2APart `json:"parts"`
 }
 
 // A2AError represents an error in A2A responses
@@ -84,6 +96,5 @@ type A2AError struct {
 
 // ChatResponse represents the internal chat response
 type ChatResponse struct {
-	Response  string `json:"response"`
-	MessageID string `json:"message_id"`
+	Response string `json:"response"`
 }

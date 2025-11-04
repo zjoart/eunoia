@@ -188,16 +188,24 @@ func TestHandleA2AMessage_ValidRequest(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", resp.Error)
 	}
 
-	if resp.Result.Task.ID == "" {
+	if resp.Result.ID == "" {
 		t.Error("expected task ID, got empty string")
 	}
 
-	if resp.Result.Task.Status != "completed" {
-		t.Errorf("expected task status 'completed', got '%s'", resp.Result.Task.Status)
+	if resp.Result.Kind != "task" {
+		t.Errorf("expected kind 'task', got '%s'", resp.Result.Kind)
 	}
 
-	if resp.Result.Message.Parts[0].Text != "Test response" {
-		t.Errorf("expected 'Test response', got '%s'", resp.Result.Message.Parts[0].Text)
+	if resp.Result.Status.State != "completed" {
+		t.Errorf("expected status state 'completed', got '%s'", resp.Result.Status.State)
+	}
+
+	if resp.Result.Status.Message.Parts[0].Text != "Test response" {
+		t.Errorf("expected 'Test response', got '%s'", resp.Result.Status.Message.Parts[0].Text)
+	}
+
+	if resp.Result.Status.Message.Role != "agent" {
+		t.Errorf("expected role 'agent', got '%s'", resp.Result.Status.Message.Role)
 	}
 }
 
