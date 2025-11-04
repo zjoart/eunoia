@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/zjoart/eunoia/internal/a2a"
+	"github.com/zjoart/eunoia/internal/pkg/id"
 )
 
 type PlatformImpl struct {
@@ -71,10 +72,10 @@ func (p *PlatformImpl) ValidateRequest(req *a2a.A2ARequest) error {
 	return nil
 }
 
-func (p *PlatformImpl) BuildResponse(id string, response *a2a.ChatResponse) *a2a.A2AResponse {
+func (p *PlatformImpl) BuildResponse(requestId string, response *a2a.ChatResponse) *a2a.A2AResponse {
 	return &a2a.A2AResponse{
 		JSONRPC: "2.0",
-		ID:      id,
+		ID:      requestId,
 		Result: a2a.A2AResult{
 			Message: a2a.A2AMessageResult{
 				Kind: "message",
@@ -90,6 +91,7 @@ func (p *PlatformImpl) BuildResponse(id string, response *a2a.ChatResponse) *a2a
 					"timestamp": time.Now().UTC().Format(time.RFC3339),
 				},
 				MessageID: response.MessageID,
+				TaskID:    id.Generate(),
 			},
 		},
 	}

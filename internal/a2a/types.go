@@ -65,6 +65,7 @@ type A2AMessageResult struct {
 	Parts     []A2APart              `json:"parts"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 	MessageID string                 `json:"messageId"`
+	TaskID    string                 `json:"taskId"`
 }
 
 // A2AError represents an error in A2A responses
