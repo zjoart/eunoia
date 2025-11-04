@@ -123,23 +123,96 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 **Protocol:** JSON-RPC 2.0  
 **Agent Discovery:** `GET /.well-known/agent.json`
 
-**Example Request:**
+### Example Request
+
 ```json
 {
   "jsonrpc": "2.0",
-  "id": "req-123",
+  "id": "req-12345",
   "method": "message/send",
   "params": {
     "message": {
       "kind": "message",
       "role": "user",
-      "parts": [{"kind": "text", "text": "I'm feeling anxious today"}],
+      "parts": [
+        {
+          "kind": "text",
+          "text": "I'm feeling anxious today"
+        }
+      ],
       "metadata": {
-        "platform_user_id": "user-123",
-        "platform_channel_id": "channel-456"
+        "telex_user_id": "user-123",
+        "telex_channel_id": "channel-456"
       },
       "messageId": "msg-789"
+    },
+    "configuration": {
+      "acceptedOutputModes": ["text/plain"],
+      "historyLength": 0,
+      "blocking": false
     }
+  }
+}
+```
+
+### Example Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req-12345",
+  "result": {
+    "id": "task-abc123",
+    "contextId": "ctx-xyz789",
+    "status": {
+      "state": "completed",
+      "timestamp": "2025-11-04T10:30:00.000Z",
+      "message": {
+        "messageId": "msg-789",
+        "role": "agent",
+        "parts": [
+          {
+            "kind": "text",
+            "text": "I hear that you're feeling anxious today. That's completely valid, and I'm here to support you. Would you like to talk about what's contributing to your anxiety, or would you prefer some grounding techniques to help you feel more centered right now?"
+          }
+        ],
+        "kind": "message",
+        "taskId": "task-abc123",
+        "metadata": {
+          "agent": "eunoia"
+        }
+      }
+    },
+    "artifacts": [
+      {
+        "artifactId": "artifact-uuid-001",
+        "name": "eunoia_response",
+        "parts": [
+          {
+            "kind": "text",
+            "text": "I hear that you're feeling anxious today. That's completely valid, and I'm here to support you. Would you like to talk about what's contributing to your anxiety, or would you prefer some grounding techniques to help you feel more centered right now?"
+          }
+        ]
+      }
+    ],
+    "history": [
+      {
+        "messageId": "msg-789",
+        "role": "agent",
+        "parts": [
+          {
+            "kind": "text",
+            "text": "I hear that you're feeling anxious today..."
+          }
+        ],
+        "kind": "message",
+        "taskId": "task-abc123",
+        "metadata": {
+          "agent": "eunoia"
+        }
+      }
+    ],
+    "kind": "task"
   }
 }
 ```
@@ -147,6 +220,11 @@ Eunoia uses a platform-agnostic architecture with flexible metadata handling:
 **Supported Metadata Keys:**
 - User ID: `platform_user_id`, `telex_user_id`, or `user_id`
 - Channel ID: `platform_channel_id`, `telex_channel_id`, or `channel_id`
+
+**Response Fields:**
+- `status.message`: The agent's current response
+- `history`: Full conversation history including the current response
+- `artifacts`: Additional resources (empty for text-only conversations)
 
 ### A2A Protocol Compliance
 

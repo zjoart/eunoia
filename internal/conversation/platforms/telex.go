@@ -143,6 +143,20 @@ func (p *PlatformImpl) BuildResponse(requestId, messageID string, history []a2a.
 	// Append the new agent response to history
 	updatedHistory := append(history, newMessage)
 
+	// Create artifact with the agent's response
+	artifacts := []a2a.A2AArtifact{
+		{
+			ArtifactID: id.Generate(),
+			Name:       "eunoia_response",
+			Parts: []a2a.A2APart{
+				{
+					Kind: "text",
+					Text: response.Response,
+				},
+			},
+		},
+	}
+
 	return &a2a.A2AResponse{
 		JSONRPC: "2.0",
 		ID:      requestId,
@@ -154,7 +168,7 @@ func (p *PlatformImpl) BuildResponse(requestId, messageID string, history []a2a.
 				Timestamp: timestamp,
 				Message:   newMessage,
 			},
-			Artifacts: []a2a.A2AArtifact{},
+			Artifacts: artifacts,
 			History:   updatedHistory,
 			Kind:      "task",
 		},
