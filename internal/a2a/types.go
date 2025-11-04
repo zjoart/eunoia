@@ -55,7 +55,14 @@ type A2AResponse struct {
 
 // A2AResult contains the result of an A2A request
 type A2AResult struct {
+	Task    A2ATaskResult    `json:"task"`
 	Message A2AMessageResult `json:"message"`
+}
+
+// A2ATaskResult represents a task in A2A responses
+type A2ATaskResult struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
 }
 
 // A2AMessageResult represents a message result in A2A responses

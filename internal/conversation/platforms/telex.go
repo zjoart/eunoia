@@ -73,10 +73,16 @@ func (p *PlatformImpl) ValidateRequest(req *a2a.A2ARequest) error {
 }
 
 func (p *PlatformImpl) BuildResponse(requestId string, response *a2a.ChatResponse) *a2a.A2AResponse {
+	taskID := id.Generate()
+
 	return &a2a.A2AResponse{
 		JSONRPC: "2.0",
 		ID:      requestId,
 		Result: a2a.A2AResult{
+			Task: a2a.A2ATaskResult{
+				ID:     taskID,
+				Status: "completed",
+			},
 			Message: a2a.A2AMessageResult{
 				Kind: "message",
 				Role: "assistant",
@@ -91,7 +97,7 @@ func (p *PlatformImpl) BuildResponse(requestId string, response *a2a.ChatRespons
 					"timestamp": time.Now().UTC().Format(time.RFC3339),
 				},
 				MessageID: response.MessageID,
-				TaskID:    id.Generate(),
+				TaskID:    taskID,
 			},
 		},
 	}
