@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/internal/user"
+	"github.com/zjoart/eunoia/pkg/id"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
 

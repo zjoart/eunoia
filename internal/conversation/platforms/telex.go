@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/zjoart/eunoia/internal/a2a"
-	"github.com/zjoart/eunoia/internal/pkg/id"
+	"github.com/zjoart/eunoia/pkg/id"
 )
 
 type PlatformImpl struct {
@@ -44,7 +44,9 @@ func (p *PlatformImpl) ExtractMessage(parts []a2a.A2APart) string {
 	}
 
 	return strings.TrimSpace(lastText)
-} // ExtractHistory extracts conversation history from the data parts
+}
+
+// ExtractHistory extracts conversation history from the data parts
 func (p *PlatformImpl) ExtractHistory(parts []a2a.A2APart, currentMessageID string) []a2a.A2AMessageResult {
 	var history []a2a.A2AMessageResult
 

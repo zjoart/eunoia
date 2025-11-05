@@ -34,38 +34,38 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate JSON-RPC 2.0 format
+	// validate JSON-RPC 2.0 format
 	if req.JSONRPC != "2.0" {
 		h.sendA2AError(w, a2a.InvalidRequest, "Invalid Request", "jsonrpc version must be 2.0")
 		return
 	}
 
-	// Use the configured platform
+	// use the configured platform
 	platform := h.platform
 	platformName := platform.Name()
 
-	// Validate request with platform-specific logic
+	// validate request with platform-specific logic
 	if err := platform.ValidateRequest(&req); err != nil {
 		h.sendA2AError(w, a2a.MethodNotFound, "Method not found", err.Error())
 		return
 	}
 
-	// Extract user ID using platform-specific logic
+	// extract user ID using platform-specific logic
 	userID, err := platform.ExtractUserID(req.Params.Message.Metadata)
 	if err != nil {
 		h.sendA2AError(w, a2a.InvalidParams, "Invalid params", err.Error())
 		return
 	}
 
-	// Extract channel ID (optional)
+	// extract channel ID
 	channelID, _ := platform.ExtractChannelID(req.Params.Message.Metadata)
 
-	// Extract message content from parts
+	// extract message content from parts
 	messageText := platform.ExtractMessage(req.Params.Message.Parts)
 
 	messageId := req.Params.Message.MessageID
 
-	// Extract conversation history from parts (passing current messageID)
+	// extract conversation history from parts
 	history := platform.ExtractHistory(req.Params.Message.Parts, messageId)
 
 	logger.Info("processing A2A message", logger.Fields{
@@ -93,7 +93,7 @@ func (h *Handler) HandleA2AMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build platform-specific response with history
+	// build platform-specific response with history
 	response := platform.BuildResponse(req.ID, messageId, history, &a2a.ChatResponse{
 		Response: chatResp.Response,
 	})
@@ -137,6 +137,6 @@ func (h *Handler) sendA2AError(w http.ResponseWriter, code int, message string, 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK) // JSON-RPC 2.0 always returns 200 with error in body
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(errResp)
 }

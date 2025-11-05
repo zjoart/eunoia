@@ -205,7 +205,6 @@ func TestConvertToGeminiHistory_LimitTo10(t *testing.T) {
 }
 
 func TestBuildUserContext(t *testing.T) {
-	// This test is skipped as it requires mocked repositories
-	// In a full integration test, you would inject mock repos
-	t.Skip("Requires mocked repositories for full testing")
+
+	t.Skip("TODO: implement mocking for repos to test various context scenarios")
 }

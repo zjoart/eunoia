@@ -7,9 +7,9 @@ import (
 
 	"github.com/zjoart/eunoia/internal/agent"
 	"github.com/zjoart/eunoia/internal/checkin"
-	"github.com/zjoart/eunoia/internal/pkg/id"
 	"github.com/zjoart/eunoia/internal/reflection"
 	"github.com/zjoart/eunoia/internal/user"
+	"github.com/zjoart/eunoia/pkg/id"
 	"github.com/zjoart/eunoia/pkg/logger"
 )
 

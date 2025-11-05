@@ -1,4 +1,3 @@
-// Package middleware provides HTTP middleware functions for the application.
 package middleware
 
 import (
@@ -7,10 +6,6 @@ import (
 	"github.com/zjoart/eunoia/pkg/logger"
 )
 
-// @Middleware		CorsMiddleware
-// @Description	Handles Cross-Origin Resource Sharing (CORS) for HTTP requests
-// @Usage			CorsMiddleware(allowedOrigins)
-// @Checks			Validates origin against allowed origins, sets CORS headers, handles preflight requests
 func CorsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
