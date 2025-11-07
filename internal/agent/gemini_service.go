@@ -49,24 +49,23 @@ func NewGeminiService(apiKey string) *GeminiService {
 func (g *GeminiService) GenerateContent(systemPrompt string, userMessage string, conversationHistory []string) (string, error) {
 	ctx := context.Background()
 
-	// Build full prompt with history embedded in text
+	// Build full prompt with clear structure
 	var promptBuilder strings.Builder
 	promptBuilder.WriteString(systemPrompt)
 	promptBuilder.WriteString("\n\n")
 
+	// Include conversation history if present
 	if len(conversationHistory) > 0 {
-		promptBuilder.WriteString("Previous conversation:\n")
-		for i, msg := range conversationHistory {
-			role := "User"
-			if i%2 == 1 {
-				role = "Assistant"
-			}
-			promptBuilder.WriteString(fmt.Sprintf("%s: %s\n", role, msg))
+		promptBuilder.WriteString("=== Recent Conversation ===\n")
+		for _, msg := range conversationHistory {
+			promptBuilder.WriteString(msg)
+			promptBuilder.WriteString("\n")
 		}
 		promptBuilder.WriteString("\n")
 	}
 
-	promptBuilder.WriteString("Current message:\n")
+	// Current message - make it clear this is what to respond to
+	promptBuilder.WriteString("=== Current Message (respond to this) ===\n")
 	promptBuilder.WriteString(userMessage)
 
 	resp, err := g.model.GenerateContent(ctx, genai.Text(promptBuilder.String()))

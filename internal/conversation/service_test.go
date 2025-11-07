@@ -124,26 +124,26 @@ func TestBuildSystemPrompt(t *testing.T) {
 		shouldNotHave []string
 	}{
 		{
-			name:    "with user context",
-			context: "Recent check-ins: 5 entries\nLatest mood: 7/10 (content)",
+			name:    "with_user_context",
+			context: "Recent check-ins: 3 entries\nLatest mood: 7/10 (content)",
 			shouldHave: []string{
 				"Eunoia",
 				"empathetic",
-				"Context about this person:",
-				"Recent check-ins",
-				"Latest mood",
+				"Background context:",
+				"Recent check-ins: 3 entries",
 			},
 			shouldNotHave: []string{},
 		},
 		{
-			name:    "without context",
+			name:    "without_context",
 			context: "",
 			shouldHave: []string{
 				"Eunoia",
 				"empathetic",
-				"Listen with genuine curiosity",
+				"Respond DIRECTLY",
+				"genuine and conversational",
 			},
-			shouldNotHave: []string{"Context about this person:"},
+			shouldNotHave: []string{"Background context:"},
 		},
 	}
 
@@ -170,10 +170,10 @@ func TestConvertToGeminiHistory(t *testing.T) {
 	service := &Service{}
 
 	messages := []*ConversationMessage{
-		{MessageContent: "Hello"},
-		{MessageContent: "Hi there!"},
-		{MessageContent: "How are you?"},
-		{MessageContent: "I'm doing well"},
+		{MessageRole: "user", MessageContent: "I'm feeling stressed about my internship"},
+		{MessageRole: "assistant", MessageContent: "It sounds like the internship is weighing on you. What specifically feels most stressful right now?"},
+		{MessageRole: "user", MessageContent: "The pace is fast, tasks drop in a minute and the next we have to submit"},
+		{MessageRole: "assistant", MessageContent: "That sounds incredibly overwhelming. The constant pressure with such quick turnarounds must feel exhausting. How does that tend to show up for you?"},
 	}
 
 	history := service.convertToGeminiHistory(messages)
@@ -182,25 +182,71 @@ func TestConvertToGeminiHistory(t *testing.T) {
 		t.Errorf("expected 4 messages in history, got %d", len(history))
 	}
 
-	if history[0] != "Hello" {
-		t.Errorf("expected first message 'Hello', got '%s'", history[0])
+	// check format includes role prefix
+	if !strings.Contains(history[0], "User: I'm feeling stressed") {
+		t.Errorf("expected first message to contain stress mention, got '%s'", history[0])
+	}
+
+	if !strings.Contains(history[1], "Eunoia:") {
+		t.Errorf("expected second message to have 'Eunoia:' prefix, got '%s'", history[1])
+	}
+
+	// verify conversation flow is preserved
+	if !strings.Contains(history[2], "User:") && !strings.Contains(history[2], "pace is fast") {
+		t.Errorf("expected third message to contain follow-up about pace, got '%s'", history[2])
 	}
 }
 
 func TestConvertToGeminiHistory_LimitTo10(t *testing.T) {
 	service := &Service{}
 
+	// simulate a long conversation (15 messages total)
 	messages := make([]*ConversationMessage, 15)
+	conversationTopics := []string{
+		"I'm excited about my presentation tomorrow",
+		"That's wonderful! What are you most looking forward to sharing?",
+		"The new features I built for the project",
+		"That sounds great! How are you feeling about it overall?",
+		"A bit nervous but excited",
+		"It's natural to feel both. Let's do a quick check-in.",
+		"Okay, sounds good",
+		"On a scale of 1-10, how would you rate your current mood?",
+		"I'd say about a 7",
+		"That's a solid place to be! What's contributing to that 7?",
+		"The excitement is helping, but also feeling the pressure",
+		"The pressure is real. How does it usually show up for you?",
+		"I tend to overthink and get anxious about small details",
+		"That's a really common experience. What helps you when that happens?",
+		"Usually talking it through helps me gain perspective",
+	}
+
 	for i := 0; i < 15; i++ {
+		role := "user"
+		if i%2 == 1 {
+			role = "assistant"
+		}
 		messages[i] = &ConversationMessage{
-			MessageContent: "Message " + string(rune('A'+i)),
+			MessageRole:    role,
+			MessageContent: conversationTopics[i],
 		}
 	}
 
 	history := service.convertToGeminiHistory(messages)
 
+	// Should only get last 10 messages (excludes first 5)
 	if len(history) != 10 {
 		t.Errorf("expected history limited to 10, got %d", len(history))
+	}
+
+	// First message in history should be the 6th message (index 5)
+	// "It's natural to feel both. Let's do a quick check-in."
+	if !strings.Contains(history[0], "natural to feel both") {
+		t.Errorf("expected first message in history to be from position 5, got '%s'", history[0])
+	}
+
+	// last message should be the most recent
+	if !strings.Contains(history[9], "talking it through") {
+		t.Errorf("expected last message to be the final message, got '%s'", history[9])
 	}
 }
 
